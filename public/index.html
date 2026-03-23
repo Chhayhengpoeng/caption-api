@@ -46,10 +46,17 @@
   .file-size { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
   .file-remove { width: 28px; height: 28px; background: transparent; border: 1px solid var(--border); border-radius: 99px; cursor: pointer; color: var(--text-secondary); font-size: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
   .file-remove:hover { background: var(--error-bg); border-color: var(--error); color: var(--error); }
-  .options-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .options-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px; }
   .option-group label { display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; letter-spacing: 0.02em; text-transform: uppercase; }
   .option-group select { width: 100%; font-family: var(--font); font-size: 14px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23a09e99' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
   .option-group select:focus { outline: none; border-color: var(--accent); }
+  .words-row { margin-bottom: 20px; display: none; }
+  .words-row.show { display: block; }
+  .words-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 10px; letter-spacing: 0.02em; text-transform: uppercase; }
+  .words-options { display: flex; gap: 8px; flex-wrap: wrap; }
+  .word-btn { font-family: var(--font); font-size: 13px; font-weight: 500; padding: 7px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 99px; cursor: pointer; color: var(--text-secondary); transition: all 0.15s; }
+  .word-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .word-btn:hover:not(.active) { border-color: var(--border-hover); color: var(--text-primary); }
   .btn-generate { width: 100%; font-family: var(--font); font-size: 15px; font-weight: 500; padding: 14px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); cursor: pointer; transition: opacity 0.15s, transform 0.1s; margin-bottom: 12px; }
   .btn-generate:hover { opacity: 0.88; }
   .btn-generate:active { transform: scale(0.99); }
@@ -89,7 +96,8 @@
   .copy-feedback.show { opacity: 1; }
   .hidden { display: none !important; }
   @media (max-width: 520px) {
-    .options-row, .steps { grid-template-columns: 1fr; }
+    .options-row { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr; }
     nav, .hero, .main-card, .how-section, footer { padding-left: 1.25rem; padding-right: 1.25rem; }
     .hero { padding-top: 40px; }
   }
@@ -143,27 +151,30 @@
 
   <div class="options-row">
     <div class="option-group">
-  <label id="txt-format-label">Output Format</label>
-  <select id="formatSelect">
-    <option value="srt">SRT Subtitle (.srt)</option>
-    <option value="txt">Plain Text (.txt)</option>
-  </select>
-</div>
-<div class="option-group" id="wordsGroup">
-  <label>Words Per Line</label>
-  <select id="wordsSelect">
-    <option value="1">1 word</option>
-    <option value="2">2 words</option>
-    <option value="3" selected>3 words</option>
-    <option value="4">4 words</option>
-    <option value="5">5 words</option>
-  </select>
-</div>
+      <label id="txt-lang-label">Language</label>
+      <select id="langSelect">
+        <option value="km">🇰🇭 ខ្មែរ (Khmer)</option>
+        <option value="en">🇺🇸 English</option>
+        <option value="zh">🇨🇳 Chinese</option>
+        <option value="th">🇹🇭 Thai</option>
+        <option value="auto">Auto Detect</option>
+      </select>
+    </div>
     <div class="option-group">
       <label id="txt-format-label">Output Format</label>
-      <select id="formatSelect">
+      <select id="formatSelect" onchange="toggleWordsRow()">
         <option value="srt">SRT Subtitle (.srt)</option>
         <option value="txt">Plain Text (.txt)</option>
+      </select>
+    </div>
+    <div class="option-group" id="wordsGroup">
+      <label id="txt-words-label">Words Per Line</label>
+      <select id="wordsSelect">
+        <option value="1">1 word</option>
+        <option value="2">2 words</option>
+        <option value="3" selected>3 words</option>
+        <option value="4">4 words</option>
+        <option value="5">5 words</option>
       </select>
     </div>
   </div>
@@ -218,7 +229,7 @@ const T = {
     label:'Audio to Caption', title:'Turn your audio<br>into clean captions.',
     desc:'Upload any audio file and get an SRT subtitle file or plain text transcript in seconds — powered by AI.',
     uploadTitle:'Drop your audio file here', uploadSub:'or click to browse from your device',
-    langLabel:'Language', formatLabel:'Output Format', btn:'Generate Captions',
+    langLabel:'Language', formatLabel:'Output Format', wordsLabel:'Words Per Line', btn:'Generate Captions',
     resultLabel:'Result', howTitle:'How it works',
     s1:'Upload Audio', s1d:'Choose any audio file from your device. MP3, WAV, M4A, and more.',
     s2:'AI Transcribes', s2d:'Our AI listens and converts speech to accurate, timestamped text.',
@@ -232,7 +243,7 @@ const T = {
     label:'បំប្លែងសំឡេងទៅជាចំណងជើង', title:'បំប្លែងសំឡេងរបស់អ្នក<br>ទៅជា Caption ច្បាស់លាស់។',
     desc:'បង្ហោះឯកសារសំឡេងណាមួយ ហើយទទួលបាន SRT subtitle ឬ text transcript ក្នុងពេលតែប៉ុន្មានវិនាទី — ដំណើរការដោយ AI។',
     uploadTitle:'ទម្លាក់ឯកសារសំឡេងរបស់អ្នកនៅទីនេះ', uploadSub:'ឬចុចដើម្បីរកមើលពីឧបករណ៍របស់អ្នក',
-    langLabel:'ភាសា', formatLabel:'ទម្រង់លទ្ធផល', btn:'បង្កើត Caption',
+    langLabel:'ភាសា', formatLabel:'ទម្រង់លទ្ធផល', wordsLabel:'ចំនួនពាក្យក្នុងមួយបន្ទាត់', btn:'បង្កើត Caption',
     resultLabel:'លទ្ធផល', howTitle:'របៀបដំណើរការ',
     s1:'បង្ហោះសំឡេង', s1d:'ជ្រើសរើសឯកសារសំឡេងណាមួយពីឧបករណ៍របស់អ្នក។ MP3, WAV, M4A, និងច្រើនទៀត។',
     s2:'AI ចម្លងសំឡេង', s2d:'AI របស់យើងស្តាប់ ហើយបំប្លែងការនិយាយទៅជាអក្សរ ជាមួយពេលវេលាច្បាស់លាស់។',
@@ -257,6 +268,7 @@ function setLang(l) {
   document.getElementById('txt-upload-sub').textContent = t.uploadSub;
   document.getElementById('txt-lang-label').textContent = t.langLabel;
   document.getElementById('txt-format-label').textContent = t.formatLabel;
+  document.getElementById('txt-words-label').textContent = t.wordsLabel;
   document.getElementById('txt-btn').textContent = t.btn;
   document.getElementById('txt-result-label').textContent = t.resultLabel;
   document.getElementById('txt-how-title').textContent = t.howTitle;
@@ -266,6 +278,11 @@ function setLang(l) {
   document.getElementById('txt-s2d').textContent = t.s2d;
   document.getElementById('txt-s3').textContent = t.s3;
   document.getElementById('txt-s3d').textContent = t.s3d;
+}
+
+function toggleWordsRow() {
+  const format = document.getElementById('formatSelect').value;
+  document.getElementById('wordsGroup').style.display = format === 'srt' ? 'block' : 'none';
 }
 
 document.getElementById('audioFile').addEventListener('change', e => handleFile(e.target.files[0]));
@@ -307,6 +324,7 @@ async function generateCaptions() {
   const t = T[lang];
   const format = document.getElementById('formatSelect').value;
   const language = document.getElementById('langSelect').value;
+  const wordsPerLine = document.getElementById('wordsSelect').value;
 
   document.getElementById('btnGenerate').disabled = true;
   document.getElementById('progressWrap').style.display = 'block';
@@ -316,15 +334,15 @@ async function generateCaptions() {
 
   try {
     const audioBase64 = await toBase64(selectedFile);
-    setProgress(45, t.p2);
+    setProgress(35, t.p2);
 
     const res = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ audioBase64, mimeType: selectedFile.type || 'audio/mpeg', language, format })
+      body: JSON.stringify({ audioBase64, mimeType: selectedFile.type || 'audio/mpeg', language, format, wordsPerLine })
     });
 
-    setProgress(85, t.p3);
+    setProgress(80, t.p3);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
 
