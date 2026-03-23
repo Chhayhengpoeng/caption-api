@@ -6,56 +6,82 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  
-  if (!apiKey) {
-    return res.status(500).json({ error: 'API key not configured. Check Vercel environment variables.' });
-  }
-
   try {
     const { audioBase64, mimeType, language, format } = req.body;
+    if (!audioBase64 || !mimeType) return res.status(400).json({ error: 'Missing audio data' });
 
-    if (!audioBase64 || !mimeType) {
-      return res.status(400).json({ error: 'Missing audio data' });
-    }
+    const assemblyKey = process.env.ASSEMBLYAI_API_KEY;
 
-    const langPrompt =
-      language === 'km' ? 'The audio is in Khmer (Cambodian).' :
-      language === 'en' ? 'The audio is in English.' :
-      language === 'zh' ? 'The audio is in Chinese.' :
-      language === 'th' ? 'The audio is in Thai.' : '';
-
-    const formatPrompt = format === 'srt'
-      ? 'Return ONLY a valid SRT subtitle file. Example:\n1\n00:00:00,000 --> 00:00:05,000\nText here'
-      : 'Return ONLY plain text transcript. No timestamps, just the spoken words.';
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    // Convert base64 to buffer and upload to AssemblyAI
+    const audioBuffer = Buffer.from(audioBase64, 'base64');
+    const uploadRes = await fetch('https://api.assemblyai.com/v2/upload', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
+        'authorization': assemblyKey,
+        'content-type': mimeType,
+      },
+      body: audioBuffer
+    });
+    const uploadData = await uploadRes.json();
+    const audioUrl = uploadData.upload_url;
+
+    // Request transcription
+    const langCode = language === 'km' ? null : language === 'zh' ? 'zh' : language === 'th' ? 'th' : 'en';
+    const transcriptRes = await fetch('https://api.assemblyai.com/v2/transcript', {
+      method: 'POST',
+      headers: {
+        'authorization': assemblyKey,
+        'content-type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 4096,
-        system: `You are a professional audio transcription AI. ${langPrompt} ${formatPrompt} Do not add any explanation or extra text.`,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'text', text: `Transcribe this audio in ${format === 'srt' ? 'SRT format' : 'plain text'}.` }
-          ]
-        }]
+        audio_url: audioUrl,
+        ...(langCode ? { language_code: langCode } : {}),
+        language_detection: !langCode
       })
     });
+    const transcriptData = await transcriptRes.json();
+    const transcriptId = transcriptData.id;
 
-    const data = await response.json();
-    if (data.error) return res.status(500).json({ error: data.error.message });
+    // Poll until done
+    let result;
+    for (let i = 0; i < 60; i++) {
+      await new Promise(r => setTimeout(r, 3000));
+      const pollRes = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
+        headers: { 'authorization': assemblyKey }
+      });
+      result = await pollRes.json();
+      if (result.status === 'completed') break;
+      if (result.status === 'error') throw new Error(result.error);
+    }
 
-    const text = data.content?.map(b => b.text || '').join('') || '';
-    return res.status(200).json({ result: text.trim() });
+    if (!result || result.status !== 'completed') throw new Error('Transcription timed out.');
+
+    let output = '';
+    if (format === 'srt') {
+      result.words?.forEach((word, i) => {
+        const start = msToSrt(word.start);
+        const end = msToSrt(word.end);
+        output += `${i + 1}\n${start} --> ${end}\n${word.text}\n\n`;
+      });
+    } else {
+      output = result.text || '';
+    }
+
+    return res.status(200).json({ result: output.trim() });
 
   } catch (err) {
     return res.status(500).json({ error: err.message || 'Something went wrong' });
   }
+}
+
+function msToSrt(ms) {
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
+  const ms2 = ms % 1000;
+  return `${pad(h)}:${pad(m)}:${pad(s)},${pad(ms2, 3)}`;
+}
+
+function pad(n, len = 2) {
+  return String(n).padStart(len, '0');
 }
