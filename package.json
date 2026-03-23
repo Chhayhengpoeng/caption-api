@@ -1,0 +1,6 @@
+{
+  "name": "caption-api",
+  "version": "1.0.0",
+  "description": "Caption tool backend for chhayheng.com",
+  "private": true
+}
