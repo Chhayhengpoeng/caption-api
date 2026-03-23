@@ -27,10 +27,9 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: { 'authorization': assemblyKey, 'content-type': 'application/json' },
       body: JSON.stringify({
-        audio_url: audioUrl,
-        ...(langCode ? { language_code: langCode } : {}),
-        language_detection: !langCode
-      })
+  audio_url: audioUrl,
+  language_detection: true
+})
     });
     const transcriptData = await transcriptRes.json();
     if (!transcriptData.id) throw new Error('Transcription request failed.');
