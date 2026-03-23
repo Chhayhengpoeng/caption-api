@@ -58,11 +58,17 @@ export default async function handler(req, res) {
 
     let output = '';
     if (format === 'srt') {
-      result.words?.forEach((word, i) => {
-        const start = msToSrt(word.start);
-        const end = msToSrt(word.end);
-        output += `${i + 1}\n${start} --> ${end}\n${word.text}\n\n`;
-      });
+  const words = result.words || [];
+  const groupSize = parseInt(req.body.wordsPerLine) || 3;
+  let index = 1;
+  for (let i = 0; i < words.length; i += groupSize) {
+    const group = words.slice(i, i + groupSize);
+    const start = msToSrt(group[0].start);
+    const end = msToSrt(group[group.length - 1].end);
+    const text = group.map(w => w.text).join(' ');
+    output += `${index}\n${start} --> ${end}\n${text}\n\n`;
+    index++;
+  }
     } else {
       output = result.text || '';
     }
