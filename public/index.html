@@ -143,15 +143,22 @@
 
   <div class="options-row">
     <div class="option-group">
-      <label id="txt-lang-label">Language</label>
-      <select id="langSelect">
-        <option value="km">🇰🇭 ខ្មែរ (Khmer)</option>
-        <option value="en">🇺🇸 English</option>
-        <option value="zh">🇨🇳 Chinese</option>
-        <option value="th">🇹🇭 Thai</option>
-        <option value="auto">Auto Detect</option>
-      </select>
-    </div>
+  <label id="txt-format-label">Output Format</label>
+  <select id="formatSelect">
+    <option value="srt">SRT Subtitle (.srt)</option>
+    <option value="txt">Plain Text (.txt)</option>
+  </select>
+</div>
+<div class="option-group" id="wordsGroup">
+  <label>Words Per Line</label>
+  <select id="wordsSelect">
+    <option value="1">1 word</option>
+    <option value="2">2 words</option>
+    <option value="3" selected>3 words</option>
+    <option value="4">4 words</option>
+    <option value="5">5 words</option>
+  </select>
+</div>
     <div class="option-group">
       <label id="txt-format-label">Output Format</label>
       <select id="formatSelect">
