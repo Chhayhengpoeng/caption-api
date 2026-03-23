@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     const audioUrl = uploadData.upload_url;
     if (!audioUrl) throw new Error('Upload failed.');
 
-    const langCode = language === 'km' ? null : language === 'zh' ? 'zh' : language === 'th' ? 'th' : 'en';
+    const langCode = language === 'en' ? 'en' : language === 'zh' ? 'zh' : language === 'th' ? 'th' : null;
     const transcriptRes = await fetch('https://api.assemblyai.com/v2/transcript', {
       method: 'POST',
       headers: { 'authorization': assemblyKey, 'content-type': 'application/json' },
