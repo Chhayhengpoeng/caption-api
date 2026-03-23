@@ -3,17 +3,4 @@
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
-```
 
-**2. Move `index.html` out of `public/` to root**
-- Click `public/index.html` → pencil icon → change filename from `public/index.html` to just `index.html` → commit
-
-**3. Delete the empty `public/` folder** (it auto-deletes when empty)
-
-After that your repo root should have:
-```
-api/
-  caption.js
-index.html
-package.json
-vercel.json
