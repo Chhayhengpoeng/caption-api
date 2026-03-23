@@ -7,32 +7,25 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { audioBase64, mimeType, language, format } = req.body;
+    const { audioBase64, mimeType, language, format, wordsPerLine } = req.body;
     if (!audioBase64 || !mimeType) return res.status(400).json({ error: 'Missing audio data' });
 
     const assemblyKey = process.env.ASSEMBLYAI_API_KEY;
+    if (!assemblyKey) return res.status(500).json({ error: 'API key not configured.' });
 
-    // Convert base64 to buffer and upload to AssemblyAI
     const audioBuffer = Buffer.from(audioBase64, 'base64');
     const uploadRes = await fetch('https://api.assemblyai.com/v2/upload', {
       method: 'POST',
-      headers: {
-        'authorization': assemblyKey,
-        'content-type': mimeType,
-      },
+      headers: { 'authorization': assemblyKey, 'content-type': mimeType },
       body: audioBuffer
     });
     const uploadData = await uploadRes.json();
     const audioUrl = uploadData.upload_url;
 
-    // Request transcription
     const langCode = language === 'km' ? null : language === 'zh' ? 'zh' : language === 'th' ? 'th' : 'en';
     const transcriptRes = await fetch('https://api.assemblyai.com/v2/transcript', {
       method: 'POST',
-      headers: {
-        'authorization': assemblyKey,
-        'content-type': 'application/json'
-      },
+      headers: { 'authorization': assemblyKey, 'content-type': 'application/json' },
       body: JSON.stringify({
         audio_url: audioUrl,
         ...(langCode ? { language_code: langCode } : {}),
@@ -42,7 +35,6 @@ export default async function handler(req, res) {
     const transcriptData = await transcriptRes.json();
     const transcriptId = transcriptData.id;
 
-    // Poll until done
     let result;
     for (let i = 0; i < 60; i++) {
       await new Promise(r => setTimeout(r, 3000));
@@ -58,17 +50,17 @@ export default async function handler(req, res) {
 
     let output = '';
     if (format === 'srt') {
-  const words = result.words || [];
-  const groupSize = parseInt(req.body.wordsPerLine) || 3;
-  let index = 1;
-  for (let i = 0; i < words.length; i += groupSize) {
-    const group = words.slice(i, i + groupSize);
-    const start = msToSrt(group[0].start);
-    const end = msToSrt(group[group.length - 1].end);
-    const text = group.map(w => w.text).join(' ');
-    output += `${index}\n${start} --> ${end}\n${text}\n\n`;
-    index++;
-  }
+      const words = result.words || [];
+      const groupSize = parseInt(wordsPerLine) || 3;
+      let index = 1;
+      for (let i = 0; i < words.length; i += groupSize) {
+        const group = words.slice(i, i + groupSize);
+        const start = msToSrt(group[0].start);
+        const end = msToSrt(group[group.length - 1].end);
+        const text = group.map(w => w.text).join(' ');
+        output += `${index}\n${start} --> ${end}\n${text}\n\n`;
+        index++;
+      }
     } else {
       output = result.text || '';
     }
