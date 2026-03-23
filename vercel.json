@@ -1,6 +1,9 @@
 {
-  "rewrites": [
-    { "source": "/api/caption", "destination": "/api/caption" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  "outputDirectory": "public",
+  "functions": {
+    "api/caption.js": {
+      "memory": 1024,
+      "maxDuration": 60
+    }
+  }
 }
